@@ -29,5 +29,13 @@ func main() {
 
 func handleRequest(conn net.Conn) {
 	defer conn.Close()
-	conn.Write([]byte("+PONG\r\n"))
+
+	for {
+		buf := make([]byte, 64)
+		_, err := conn.Read(buf)
+		if err != nil {
+			break
+		}
+		conn.Write([]byte("+PING\r\n"))
+	}
 }
