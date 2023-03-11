@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -44,7 +45,7 @@ func handleRequest(conn net.Conn) {
 
 		command := parsed.Value[0].(RespBulkString).Value
 
-		switch string(command) {
+		switch strings.ToUpper(string(command)) {
 		case "PING":
 			conn.Write([]byte("+PONG\r\n"))
 		case "ECHO":
