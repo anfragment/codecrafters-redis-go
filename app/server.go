@@ -31,11 +31,29 @@ func handleRequest(conn net.Conn) {
 	defer conn.Close()
 
 	for {
-		buf := make([]byte, 64)
+		buf := make([]byte, 1024)
 		_, err := conn.Read(buf)
 		if err != nil {
 			break
 		}
-		conn.Write([]byte("+PONG\r\n"))
+
+		parsed, _, err := parseArray(buf[1:], 0)
+		if err != nil {
+			conn.Write([]byte("-ERR\r\n"))
+		}
+
+		command := parsed.Value[0].(RespBulkString).Value
+
+		switch string(command) {
+		case "PING":
+			conn.Write([]byte("+PONG\r\n"))
+		case "ECHO":
+			echo := RespArray{Value: parsed.Value[1:]}
+			conn.Write(echo.Bytes())
+		case "COMMAND":
+			conn.Write([]byte("*1\r\n$4\r\nINFO\r\n"))
+		default:
+			conn.Write([]byte("-ERR\r\n"))
+		}
 	}
 }
