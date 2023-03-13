@@ -28,6 +28,8 @@ func main() {
 	}
 }
 
+var storage = make(map[string]RespBulkString)
+
 func handleRequest(conn net.Conn) {
 	defer conn.Close()
 
@@ -43,18 +45,51 @@ func handleRequest(conn net.Conn) {
 			conn.Write([]byte("-ERR\r\n"))
 		}
 
+		throw := func() {
+			conn.Write([]byte("-ERR\r\n"))
+		}
+		if len(parsed.Value) == 0 {
+			throw()
+			continue
+		}
 		command := parsed.Value[0].(RespBulkString).Value
-
 		switch strings.ToUpper(string(command)) {
 		case "PING":
 			conn.Write([]byte("+PONG\r\n"))
 		case "ECHO":
 			echo := RespArray{Value: parsed.Value[1:]}
 			conn.Write(echo.Bytes())
-		case "COMMAND":
-			conn.Write([]byte("*1\r\n$4\r\nINFO\r\n"))
+		case "SET":
+			if len(parsed.Value) != 3 {
+				throw()
+				continue
+			}
+			key, keyOk := parsed.Value[1].(RespBulkString)
+			value, valueOk := parsed.Value[2].(RespBulkString)
+			if !keyOk || !valueOk {
+				throw()
+				continue
+			}
+			storage[string(key.Value)] = value
+			conn.Write([]byte("+OK\r\n"))
+		case "GET":
+			if len(parsed.Value) != 2 {
+				throw()
+				continue
+			}
+			key, ok := parsed.Value[1].(RespBulkString)
+			if !ok {
+				throw()
+				continue
+			}
+			value, ok := storage[string(key.Value)]
+			if !ok {
+				throw()
+				continue
+			}
+			conn.Write(value.Bytes())
 		default:
-			conn.Write([]byte("-ERR\r\n"))
+			throw()
 		}
 	}
 }
