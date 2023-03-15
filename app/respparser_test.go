@@ -13,7 +13,7 @@ func TestParseSimpleString(t *testing.T) {
 }
 
 func TestParseInteger(t *testing.T) {
-	i, end, err := parseInteger([]byte("123456\r\n"), 0)
+	i, end, err := ParseInteger([]byte("123456\r\n"), 0)
 	if i.Value != 123456 || end != 7 || err != nil {
 		t.Errorf(`parseInteger([]byte("123456\r\n") = %v, %d, %v, want 123456, 7, nil`, i, end, err)
 	}

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -60,10 +62,11 @@ func handleRequest(conn net.Conn) {
 			echo := RespArray{Value: parsed.Value[1:]}
 			conn.Write(echo.Bytes())
 		case "SET":
-			if len(parsed.Value) != 3 {
+			if len(parsed.Value) < 3 {
 				throw()
 				continue
 			}
+
 			key, keyOk := parsed.Value[1].(RespBulkString)
 			value, valueOk := parsed.Value[2].(RespBulkString)
 			if !keyOk || !valueOk {
@@ -71,6 +74,30 @@ func handleRequest(conn net.Conn) {
 				continue
 			}
 			storage[string(key.Value)] = value
+
+			if len(parsed.Value) == 5 {
+				px, pxOk := parsed.Value[3].(RespBulkString)
+				exp, expOk := parsed.Value[4].(RespBulkString)
+				if pxOk && strings.ToUpper(string(px.Value)) == "PX" && expOk {
+					ms, err := strconv.Atoi(exp.String())
+					if err != nil {
+						throw()
+						continue
+					}
+
+					go func() {
+						timer := time.NewTimer(time.Duration(ms) * time.Millisecond)
+						<-timer.C
+						v := storage[string(key.Value)]
+						v.Value = nil
+						storage[string(key.Value)] = v
+					}()
+				} else {
+					throw()
+					continue
+				}
+			}
+
 			conn.Write([]byte("+OK\r\n"))
 		case "GET":
 			if len(parsed.Value) != 2 {

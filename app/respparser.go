@@ -37,7 +37,7 @@ func (i RespInteger) Bytes() []byte {
 	return buf.Bytes()
 }
 
-func parseInteger(data []byte, i int) (res RespInteger, end int, err error) {
+func ParseInteger(data []byte, i int) (res RespInteger, end int, err error) {
 	var sign int64 = 1
 	if data[i] == byte('-') {
 		sign = -1
@@ -78,7 +78,7 @@ func (bs RespBulkString) Bytes() []byte {
 }
 
 func parseBulkString(data []byte, i int) (bs RespBulkString, end int, err error) {
-	length, i, err := parseInteger(data, i)
+	length, i, err := ParseInteger(data, i)
 	if err != nil {
 		return RespBulkString{}, i, err
 	}
@@ -137,7 +137,7 @@ func (arr *RespArray) Bytes() []byte {
 }
 
 func parseArray(data []byte, i int) (arr RespArray, end int, err error) {
-	length, i, err := parseInteger(data, i)
+	length, i, err := ParseInteger(data, i)
 	if err != nil {
 		return RespArray{}, i, err
 	}
