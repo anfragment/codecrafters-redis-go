@@ -116,22 +116,7 @@ func (arr *RespArray) Bytes() []byte {
 	buf.WriteString(fmt.Sprintf("%d", len(arr.Value)))
 	buf.WriteString("\r\n")
 	for _, el := range arr.Value {
-		switch v := el.(type) {
-		case RespBulkString:
-			if v.Value == nil {
-				buf.WriteString("$-1\r\n")
-			} else {
-				buf.WriteString("$")
-				buf.WriteByte(byte(len(v.Value)) + byte('0'))
-				buf.WriteString("\r\n")
-				buf.Write(v.Value)
-				buf.WriteString("\r\n")
-			}
-		case RespInteger:
-			buf.WriteString(":")
-			buf.WriteString(fmt.Sprintf("%d", v.Value))
-			buf.WriteString("\r\n")
-		}
+		buf.Write(el.Bytes())
 	}
 	return buf.Bytes()
 }

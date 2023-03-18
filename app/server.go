@@ -52,7 +52,7 @@ func handleRequest(conn net.Conn) {
 		}
 		if len(parsed.Value) == 0 {
 			throw()
-			continue
+			break
 		}
 		command := parsed.Value[0].(RespBulkString).Value
 		switch strings.ToUpper(string(command)) {
@@ -64,38 +64,41 @@ func handleRequest(conn net.Conn) {
 		case "SET":
 			if len(parsed.Value) < 3 {
 				throw()
-				continue
+				break
 			}
 
 			key, keyOk := parsed.Value[1].(RespBulkString)
 			value, valueOk := parsed.Value[2].(RespBulkString)
 			if !keyOk || !valueOk {
 				throw()
-				continue
+				break
 			}
 			storage[string(key.Value)] = value
 
 			if len(parsed.Value) == 5 {
 				px, pxOk := parsed.Value[3].(RespBulkString)
-				exp, expOk := parsed.Value[4].(RespBulkString)
-				if pxOk && strings.ToUpper(string(px.Value)) == "PX" && expOk {
-					ms, err := strconv.Atoi(exp.String())
-					if err != nil {
-						throw()
-						continue
-					}
-
-					go func() {
-						timer := time.NewTimer(time.Duration(ms) * time.Millisecond)
-						<-timer.C
-						v := storage[string(key.Value)]
-						v.Value = nil
-						storage[string(key.Value)] = v
-					}()
-				} else {
+				if !pxOk || strings.ToUpper(string(px.Value)) != "PX" {
 					throw()
-					continue
+					break
 				}
+				exp, expOk := parsed.Value[4].(RespBulkString)
+				if !expOk {
+					throw()
+					break
+				}
+				ms, err := strconv.Atoi(exp.String())
+				if err != nil {
+					throw()
+					break
+				}
+
+				go func() {
+					timer := time.NewTimer(time.Duration(ms) * time.Millisecond)
+					<-timer.C
+					v := storage[string(key.Value)]
+					v.Value = nil
+					storage[string(key.Value)] = v
+				}()
 			}
 
 			conn.Write([]byte("+OK\r\n"))
